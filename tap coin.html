@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux - Tap Coin Game</title>
+    <style>
+        /* Skull theme styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: black;
+            color: white;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+        }
+
+        /* Title style */
+        header {
+            color: white;
+            font-size: 36px;
+            margin-top: 20px;
+            margin-bottom: 60px; /* 3 lines of space */
+        }
+
+        /* Coin count style */
+        .coin-count {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        /* Progress bar style */
+        .progress-container {
+            width: 80%;
+            height: 20px;
+            background-color: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #ffcc00; /* Gold color */
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+
+        /* Coin logo button */
+        .coin-button {
+            padding: 15px;
+            font-size: 24px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        /* Coin icon */
+        .coin-icon {
+            font-size: 150px; /* Bigger coin size */
+        }
+
+        /* Coin shake animation */
+        .shake {
+            animation: shake 0.2s;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(5px, 0); }
+            50% { transform: translate(-5px, 0); }
+            75% { transform: translate(5px, 0); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Coin limit display */
+        .coin-limit {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* Timer display */
+        .timer {
+            font-size: 24px;
+            color: #ffcc00; /* Gold color for timer */
+            margin-bottom: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Title at the top -->
+    <header>
+        Linux
+    </header>
+
+    <!-- Display coin count -->
+    <div class="coin-count" id="coinCount">Coins: 0</div>
+
+    <!-- Coin button (with coin icon) -->
+    <button class="coin-button" id="coinButton">
+        <span class="coin-icon">🪙</span>
+    </button>
+
+    <!-- Progress bar -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar" style="width: 100%;"></div>
+    </div>
+
+    <!-- Coin limit (e.g., 1000/5000) -->
+    <div class="coin-limit" id="coinLimit">0/5000</div>
+
+    <!-- Timer -->
+    <div class="timer" id="timer">Next coin increase in: 05:00</div>
+
+    <script>
+        let coins = 0;
+        const maxCoins = 5000;
+        const coinIncrement = 1000; // User can collect 1000 coins every 5 minutes
+        const timePerCoin = 5 * 60 * 1000; // 5 minutes in milliseconds
+        const collectionLimitTime = 25 * 60 * 1000; // 25 minutes in milliseconds
+        let canCollect = true;
+        let timeLeft = collectionLimitTime;
+        let timerInterval;
+
+        const coinButton = document.getElementById('coinButton');
+
+        // Shake animation when the coin is tapped
+        function shakeCoin() {
+            coinButton.classList.add('shake');
+            setTimeout(() => {
+                coinButton.classList.remove('shake');
+            }, 200);
+        }
+
+        // Update progress bar and coin limit text
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = (coins / maxCoins) * 100;
+            progressBar.style.width = progressPercent + '%';
+
+            const coinLimit = document.getElementById('coinLimit');
+            coinLimit.textContent = `${coins}/${maxCoins}`;
+        }
+
+        function updateTimer(remainingTime) {
+            const minutes = Math.floor((remainingTime / 1000 / 60) % 60);
+            const seconds = Math.floor((remainingTime / 1000) % 60);
+            document.getElementById('timer').textContent = 
+                `Next coin increase in: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        function tapCoin() {
+            if (!canCollect) {
+                alert("You've reached the maximum coin limit. Please wait for the timer to reset.");
+                return;
+            }
+
+            if (coins < maxCoins) {
+                coins++;
+                document.getElementById('coinCount').textContent = 'Coins: ' + coins;
+
+                // Shake the coin and update the progress bar
+                shakeCoin();
+                updateProgress();
+
+                if (coins === maxCoins) {
+                    canCollect = false;
+                    startTimer();
+                }
+            }
+        }
+
+        // Multi-touch handler to allow up to 5 fingers tapping at once
+        coinButton.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            const touches = event.touches.length;
+            if (touches > 0 && touches <= 5) {
+                for (let i = 0; i < touches; i++) {
+                    tapCoin();
+                }
+            }
+        });
+
+        // Timer for 25 minutes (reset coins after this)
+        function startTimer() {
+            timeLeft = collectionLimitTime;
+            updateTimer(timeLeft);
+            timerInterval = setInterval(() => {
+                timeLeft -= 1000;
+                updateTimer(timeLeft);
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    canCollect = true;
+                    coins = 0; // Reset coins when limit resets
+                    document.getElementById('coinCount').textContent = 'Coins: ' + coins;
+                    updateProgress(); // Reset progress bar
+                }
+            }, 1000);
+        }
+
+        // Start the 5-minute increment timer
+        setInterval(() => {
+            if (coins < maxCoins && canCollect) {
+                coins += coinIncrement;
+                if (coins > maxCoins) coins = maxCoins;
+                updateProgress();
+                document.getElementById('coinCount').textContent = 'Coins: ' + coins;
+            }
+        }, timePerCoin);
+
+    </script>
+
+</body>
+</html>
